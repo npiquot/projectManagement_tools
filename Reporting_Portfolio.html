@@ -167,6 +167,10 @@ tr:last-child td{border-bottom:0}
 .chip-x button:hover{color:var(--red)}
 .addf{display:flex;gap:8px;max-width:360px}
 .addf input{font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--mauve-line);border-radius:8px;flex:1}
+.daterange{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;margin:4px 0 6px}
+.dfield{display:flex;flex-direction:column;gap:6px}
+.dfield span{font-size:11.5px;color:var(--hint)}
+.dfield input[type="date"]{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--mauve-line);border-radius:8px;color:var(--slate);background:#fff}
 
 /* Help screen */
 .help-wrap{max-width:780px}
@@ -434,6 +438,8 @@ function normState(){
   if(!state.settings) state.settings={};
   if(!Array.isArray(state.settings.titleFilters)) state.settings.titleFilters=['AEO','PIAT'];
   if(state.settings.pulseMode!=='oui'&&state.settings.pulseMode!=='all') state.settings.pulseMode='oui';
+  if(!Object.prototype.hasOwnProperty.call(state.settings,'jalonDateDebut')){ state.settings.jalonDateDebut=new Date().getFullYear()+'-01-01'; }
+  if(!Object.prototype.hasOwnProperty.call(state.settings,'jalonDateFin')){ state.settings.jalonDateFin=''; }
   if(!state.unit) state.unit='ke';
 }
 function periodKeys(){ return Object.keys(state.periods).sort(); }
@@ -684,7 +690,8 @@ function renderRisk(cp){
       {label:'Anomalies détectées',type:'num',get:function(j){return jalonDataChecks(j).length;},render:function(j){return jalonDataChecks(j).map(function(t){return '<span class="tag">'+esc(t)+'</span>';}).join('');}}
     ];
     var jdqTable=jdqItems.length? renderTable(jdqCols,jdqItems,'jdq') : '<div class="table-wrap"><table><tbody><tr><td class="hint" style="padding:18px">Aucune anomalie sur les jalons.</td></tr></tbody></table></div>';
-    jdqZone='<div class="zone-title" style="margin-top:22px">Cohérence des données — jalons</div><div class="zone-sub">une ligne par jalon présentant au moins une anomalie</div>'+jdqTable;
+    jdqZone='<div class="zone-title" style="margin-top:22px">Cohérence des données — jalons</div><div class="zone-sub">une ligne par jalon présentant au moins une anomalie</div>'+
+      '<div class="meta" style="margin:8px 0 12px"><span class="chip on">'+esc(jalonPeriodLabel())+'</span></div>'+jdqTable;
   }
 
   return head('Risk Management','Projets en difficulté & contrôle de cohérence · '+esc(cp.label))+
@@ -792,6 +799,19 @@ function enrichJalon(r,proj,obs){
   var risk=actif&&near&&low;
   return Object.assign({},r,{_di:di,_dit:dit,_dm:dm,_df:df,_ref:ref,_st:st,_av:av,_solde:solde,_aband:aband,_actif:actif,_late:late,_up:up,_drift:drift,_replan:replan,_itGap:itGap,_risk:risk,_proj:proj,_meteo:proj?meteo(proj.meteo_globale):''});
 }
+function jalonInPeriod(ref,debutIso,finIso){
+  if(!ref) return true; // jalon sans aucune échéance : toujours inclus (anomalie jamais masquée)
+  if(debutIso){ var d=dOf(debutIso); if(d && ref<d) return false; }
+  if(finIso){ var f=dOf(finIso); if(f && ref>f) return false; }
+  return true;
+}
+function jalonPeriodLabel(){
+  var d=state.settings.jalonDateDebut, f=state.settings.jalonDateFin;
+  if(!d && !f) return 'Jalons : toutes périodes';
+  if(d && !f) return 'Jalons : depuis '+fmtDate(dOf(d));
+  if(!d && f) return 'Jalons : jusqu\u2019au '+fmtDate(dOf(f));
+  return 'Jalons : '+fmtDate(dOf(d))+' \u2192 '+fmtDate(dOf(f));
+}
 function jalonContext(view){
   if(!view) return null;
   var jp=state.jalons&&state.jalons[view.key];
@@ -799,6 +819,8 @@ function jalonContext(view){
   var byId={}; view.projects.forEach(function(p){ byId[String(p.idInit)]=p; });
   var obs=new Date(view.year,view.month,0);
   var list=jp.rows.filter(function(r){ return byId[String(r.idInit)]; }).map(function(r){ return enrichJalon(r,byId[String(r.idInit)],obs); });
+  var debut=state.settings.jalonDateDebut, fin=state.settings.jalonDateFin;
+  list=list.filter(function(j){ return jalonInPeriod(j._ref,debut,fin); });
   return {list:list,obs:obs};
 }
 function jalonSegment(list,seg,obs){
@@ -835,8 +857,10 @@ function kpi(val,label,alert){ return '<div class="kpi'+(alert?' alert':'')+'"><
 
 function renderJalons(view){
   var ctx=jalonContext(view);
+  var periodChip='<div class="meta" style="margin:-4px 0 16px"><span class="chip on">'+esc(jalonPeriodLabel())+'</span></div>';
   if(!ctx){
     return head('Jalons Projets','Suivi du delivery & des jalons · '+esc(view.label))+
+      periodChip+
       '<div class="empty-state" style="margin-top:8px"><h2>Aucun jalon pour '+esc(view.label)+'</h2><p>Importez le fichier « Export Pulse Jalon » correspondant à cette période.</p><button class="btn primary" onclick="APP.openImport(\'jalon\')">Importer les jalons</button></div>';
   }
   var list=ctx.list, obs=ctx.obs;
@@ -879,7 +903,7 @@ function renderJalons(view){
   var statutChip=jalonStatutFilter!=null?'<div class="chips-edit" style="margin:-4px 0 12px"><span class="chip-x">Statut : '+esc(jalonStatutFilter)+'<button title="Retirer" onclick="APP.setJalonStatutFilter(null)">×</button></span></div>':'';
   var table=rows.length?renderTable(jcols,rows,'jalons'):'<div class="table-wrap"><table><tbody><tr><td class="hint" style="padding:18px">Aucun jalon dans cette vue.</td></tr></tbody></table></div>';
   return head('Jalons Projets','Suivi du delivery & des jalons · '+esc(view.label)+' · observation au '+fmtDate(obs))+
-    kpis+segBar+statutChip+table+renderCarto(list,view);
+    periodChip+kpis+segBar+statutChip+table+renderCarto(list,view);
 }
 var STATUT_COLORS={'realise':'#2F9E6B','anticipe':'#5BB89A','en cours':'#E0A21A','en retard':'#D6453F','non commence':'#B9B2C2','revu':'#714A80','abandonne':'#8A8593','(vide)':'#E5E1EA'};
 function statutColor(label){ if(label==='(vide)') return STATUT_COLORS['(vide)']; var k=norm(label); return STATUT_COLORS[k]||'#C8C2D0'; }
@@ -945,6 +969,13 @@ function renderSettings(){
         '<button class="'+(s.pulseMode==='oui'?'on':'')+'" onclick="APP.setPulseMode(\'oui\')">Oui</button>'+
         '<button class="'+(s.pulseMode==='all'?'on':'')+'" onclick="APP.setPulseMode(\'all\')">ALL</button>'+
       '</div>'+
+      '<div class="flabel">Période d\'analyse des jalons</div>'+
+      '<div class="fhint">Restreint les jalons pris en compte (KPIs, tableau, cartographie, contrôles de cohérence) à leur échéance de référence. Un jalon sans aucune échéance reste toujours inclus. Champ vide = pas de borne de ce côté.</div>'+
+      '<div class="daterange">'+
+        '<label class="dfield"><span>Date de début</span><input type="date" value="'+esc(s.jalonDateDebut||'')+'" onchange="APP.setJalonDateDebut(this.value)"></label>'+
+        '<label class="dfield"><span>Date de fin</span><input type="date" value="'+esc(s.jalonDateFin||'')+'" onchange="APP.setJalonDateFin(this.value)"></label>'+
+      '</div>'+
+      '<div class="fhint" style="margin-top:8px">'+esc(jalonPeriodLabel())+'</div>'+
     '</div>';
 }
 
@@ -1074,6 +1105,8 @@ window.APP={
   addTitleFilter:function(){ var i=document.getElementById('newTitleFilter'); if(!i)return; var v=(i.value||'').trim(); if(!v){ i.focus(); return; } var arr=state.settings.titleFilters||(state.settings.titleFilters=[]); if(arr.map(function(x){return norm(x);}).indexOf(norm(v))===-1){ arr.push(v); } idbSave(); render(); var ni=document.getElementById('newTitleFilter'); if(ni)ni.focus(); },
   removeTitleFilter:function(idx){ var arr=state.settings.titleFilters||[]; arr.splice(idx,1); idbSave(); render(); },
   setPulseMode:function(m){ state.settings.pulseMode=(m==='all'?'all':'oui'); idbSave(); render(); },
+  setJalonDateDebut:function(v){ state.settings.jalonDateDebut=v||''; idbSave(); render(); },
+  setJalonDateFin:function(v){ state.settings.jalonDateFin=v||''; idbSave(); render(); },
   sort:function(key,col){ var st=sortState[key]; if(st&&st.col===col){ st.dir=-st.dir; } else { sortState[key]={col:col,dir:1}; } render(); },
   setUnit:function(u){ state.unit=u; idbSave(); render(); },
   toggle:function(id,btn){ var el=document.getElementById(id); if(!el)return; el.classList.toggle('clamp'); btn.textContent=el.classList.contains('clamp')?'voir plus ›':'réduire ‹'; },
