@@ -1,5 +1,5 @@
-# Reporting ATS — Spécification fonctionnelle
-**Version :** 0.12 (en cours de spécification)
+# Reporting Portfolio — Spécification fonctionnelle
+**Version :** 0.15 (en cours de spécification)
 **Statut :** Brouillon soumis à validation — *développement non démarré*
 **Propriétaire :** Direction Architecture & Standards Technologique (ATS)
 
@@ -7,9 +7,9 @@
 
 ## 1. Contexte & objectif
 
-L'outil **« Reporting ATS »** a pour but de permettre au directeur du département Architecture & Standards Technologique de **suivre l'avancement de son portefeuille de projets** et de chacun des projets pris individuellement.
+L'outil **« Reporting Portfolio »** a pour but de permettre au directeur du département Architecture & Standards Technologique de **suivre l'avancement de son portefeuille de projets** et de chacun des projets pris individuellement.
 
-Les chefs de projet renseignent des fiches de synthèse dans l'outil projet de la DSI. Une **extraction Excel mensuelle** de cet outil constitue la source de données de Reporting ATS. L'outil est donc **découplé** de l'outil projet : pas d'intégration temps réel, alimentation par import au rythme mensuel.
+Les chefs de projet renseignent des fiches de synthèse dans l'outil projet de la DSI. Une **extraction Excel mensuelle** de cet outil constitue la source de données de Reporting Portfolio. L'outil est donc **découplé** de l'outil projet : pas d'intégration temps réel, alimentation par import au rythme mensuel.
 
 ---
 
@@ -47,7 +47,7 @@ Les chefs de projet renseignent des fiches de synthèse dans l'outil projet de l
 ## 3. Import des extractions & mécanisme d'historique
 
 ### 3.1 Import d'une extraction
-- Bouton explicite **« Importer l'extraction »** → sélection du fichier `.xlsx` issu de l'outil de pilotage projet BPCE (données actualisées du mois).
+- Bouton explicite **« Importer Synthèse Projets »** *(anciennement « Importer l'extraction »)* → sélection du fichier `.xlsx` issu de l'outil de pilotage projet (données actualisées du mois).
 - Au moment de l'import, l'utilisateur **saisit la période** via **deux listes déroulantes** :
   - **Mois** : janvier → décembre,
   - **Année** : **2026 à 2030**.
@@ -62,8 +62,8 @@ Les chefs de projet renseignent des fiches de synthèse dans l'outil projet de l
 - **Périmètre V1 : démarrage avec deux périodes** (N et N-1).
 - **Architecture cible :** conçue pour accepter des imports successifs au-delà de deux, sans refonte ultérieure.
 
-### 3.3 Import complémentaire — « Export Pulse Jalon »
-- Un **second import**, en complément de l'« Export Pulse », alimente l'écran **Jalons Projets** (cf. §11).
+### 3.3 Import complémentaire — « Export Jalons »
+- Un **second import**, en complément de l'« Export Projets », alimente l'écran **Jalons Projets** (cf. §11).
 - Fichier `.xlsx` ; l'outil lit **le premier onglet**, quel que soit son nom.
 - Sélection **mois + année** identiques à l'import projet ; le couple identifie l'extraction jalon ; ré-import du même mois = remplacement.
 - Croisement avec les projets **uniquement pour une même période** (cf. §11.1).
@@ -75,14 +75,14 @@ Les chefs de projet renseignent des fiches de synthèse dans l'outil projet de l
 Les filtres d'entrée déterminent les projets pris en compte. Ils sont **paramétrables via l'écran « Paramétrage »** (§12) et **appliqués dynamiquement à l'affichage** (cf. §3.1). **Tous les filtres sont insensibles à la casse.**
 
 **1. Intitulé projet** — liste de valeurs configurables. Un projet satisfait ce critère si son `Intitulé projet` **contient** au moins une des valeurs, **quelle que soit la position** dans l'intitulé (correspondance de type `%valeur%`, logique **OU**).
-- Valeurs **par défaut** : « AEO », « PIAT ».
+- **Aucune valeur par défaut** : la liste est vide au premier lancement — le critère n'est pas appliqué, tous les projets passent.
 - **Liste vide → critère non appliqué** : tous les projets passent ce critère.
 
-**2. Suivi dans Pulse** — mode configurable :
-- **« Oui »** (défaut) : le projet doit avoir `Suivi dans Pulse` = « Oui ».
+**2. Suivi Portfolio** — mode configurable :
+- **« Oui »** (défaut) : le projet doit avoir `Suivi Portfolio` = « Oui ».
 - **« ALL »** : ce filtre n'est pas appliqué.
 
-**Règle combinée :** un projet est retenu si **(critère Intitulé satisfait)** **ET** **(`Suivi dans Pulse` = « Oui » OU mode « ALL »)**.
+**Règle combinée :** un projet est retenu si **(critère Intitulé satisfait)** **ET** **(`Suivi Portfolio` = « Oui » OU mode « ALL »)**.
 
 > **Règle générale (transverse) :** sauf spécification explicite contraire, ces filtres s'appliquent à **tous les écrans** de l'outil (y compris la restriction des jalons aux projets retenus, §11.1). Toute modification dans l'écran « Paramétrage » **recalcule immédiatement l'ensemble des écrans**, sans réimport.
 
@@ -132,6 +132,26 @@ Vue tabulaire : **une ligne par projet** filtré.
 - Met en évidence visuellement tout **changement de météo OU de tendance** entre les deux derniers imports.
 - **Périmètre : les 4 axes affichés** (globale, budget, planning, périmètre).
 - Conséquence : un projet dont *un seul* des 4 axes bouge (ex. budget passant au rouge) est signalé comme « a évolué ».
+
+### 5.6 Filtre « Évolutions N-1 » *(évolution v0.15)*
+
+**Accès** : bouton toggle **« Évolutions N-1 »** dans la **zone outils de l'en-tête de l'écran Synthèse portfolio** (à droite du bandeau de titre, symétrique au toggle k€/JH de l'écran budgétaire). Ce bouton est **local à l'écran Portfolio** — il n'apparaît pas dans le bandeau global ni sur les autres écrans, car son effet se limite à ce seul tableau.
+
+**Comportement** :
+- **Inactive (défaut)** : tous les projets passant les filtres §4 sont affichés.
+- **Active** : seuls les projets portant le marqueur d'évolution (§5.5 — au moins un axe météo ou tendance a changé entre N et N-1) sont affichés.
+- **En l'absence de période N-1** (aucune extraction précédente chargée) : la chip est **affichée mais grisée et non cliquable**, avec une infobulle au survol indiquant qu'aucune période précédente n'est disponible.
+
+**Persistance** : mémorisée lors des changements d'écran dans la session courante ; **réinitialisée à la réouverture de l'outil** (pas de persistance IndexedDB ni DB.json).
+
+### 5.7 Affichage de la météo N-1 dans la colonne Santé *(évolution v0.15)*
+
+Lorsque le filtre « Évolutions N-1 » est **actif**, une **ligne N-1** s'affiche sous la ligne courante dans la cellule Santé, pour chaque projet ayant évolué :
+
+- **Ligne courante (N)** : météo globale (icône majeure) · pastilles budget/planning/périmètre · flèche tendance globale · point mauve d'évolution — inchangée.
+- **Ligne N-1** (nouvelle, sous la précédente) : préfixe court « N-1 → » en texte atténué · **icône météo globale N-1** · **3 pastilles axes N-1** (budget · planning · périmètre), au même format visuel que la ligne courante mais visuellement atténuée (opacité réduite) pour signifier le caractère historique de cette donnée.
+
+Les projets sans évolution (portant le point mauve mais affichés parce que le filtre n'est pas actif) **n'affichent pas la ligne N-1** — celle-ci n'apparaît que lorsque le filtre est actif.
 
 ---
 
@@ -249,9 +269,19 @@ Le budget de référence étant une **enveloppe annuelle** (cf. §6.3), l'hypoth
   - *Globale sur-évaluée* → **orage (rouge) marqué d'une pastille de validation verte** — alarme démentie par les axes.
 - Le libellé qualifiant (« globale sous-évaluée » / « globale sur-évaluée ») est fourni : en **infobulle au survol** de l'icône (attribut `title`) et en **texte de remplacement** si l'image est absente (`alt` pour une image, ou nom accessible équivalent `aria-label` / `<title>` pour une icône SVG inline).
 
-### 7.6 Troisième zone — Contrôles de cohérence des données
+### 7.6 Troisième zone — Risques masqués *(déplacé depuis §11.5, évolution v0.15)*
 
-**Objectif** : détecter les anomalies de **qualité / cohérence des fiches**, au-delà de la cohérence météo (§7.5).
+**Objectif** : identifier les projets dont la météo globale est verte mais qui portent au moins un jalon en retard — risque sous-déclaré au niveau projet, visible seulement par le croisement avec les jalons.
+
+**Pré-requis** : un fichier jalon importé pour la période courante ; soumis au **filtre de période** §12.2.
+
+**Règle** : projet dont la météo globale = verte **et** ≥ 1 jalon en retard (cf. définition §11.2). Les jalons sont ceux retenus par les filtres §4 et §12.2 ; les filtres rapides de l'écran Jalons (§11.5) ne s'appliquent pas ici.
+
+**Affichage** : tableau listant les projets concernés (colonnes : Intitulé projet · Météo globale · Nombre de jalons en retard). Si aucun risque masqué détecté : message d'information.
+
+### 7.7 Quatrième zone — Contrôles de cohérence des données
+
+**Objectif** : détecter les anomalies de **qualité / cohérence des fiches**, au-delà de la cohérence météo (§7.5) et des risques masqués (§7.6).
 
 **Périmètre & affichage** : tous les projets passant les filtres de base (§4). Seuls les projets présentant **au moins une anomalie** sont listés, **une ligne par projet** ; les anomalies sont affichées en **libellés courts** (un projet peut en cumuler plusieurs). Toutes les analyses budgétaires se font **en euros** ; le **budget de référence** est le révisé s'il est renseigné, sinon l'initial.
 
@@ -267,7 +297,7 @@ Le budget de référence étant une **enveloppe annuelle** (cf. §6.3), l'hypoth
 | 6 | Narratif incomplet sur projet à risque | météo globale **rouge ou jaune** **et** (« Principales réalisations » **ou** « Prochaines étapes » vide) | — |
 | 7 | Atterrissage projeté hors cible | voir §7.6.1 | statuts **actifs** ; budget de référence € > 0 |
 
-#### 7.6.1 Contrôle de projection (atterrissage)
+#### 7.7.1 Contrôle de projection (atterrissage)
 
 Extrapolation de la consommation actuelle à l'année pleine via l'avancement calendaire (§6.3, tel qu'utilisé à l'écran 2) :
 
@@ -280,9 +310,9 @@ Comparaison au budget de référence € avec une **tolérance de ±5 %** :
 
 **Périmètre du contrôle** : projets **actifs uniquement** (`En réalisation`, `En murissement`), avec **budget de référence € > 0**.
 
-#### 7.6.2 Contrôles de cohérence des données — jalons
+#### 7.7.2 Contrôles de cohérence des données — jalons
 
-Affichés **uniquement si un fichier jalon est importé pour la période courante** (cf. §11.1). Un **sous-tableau** dédié liste, **une ligne par jalon** présentant au moins une anomalie (colonnes : Projet · Jalon · étiquettes d'anomalie). Contrôles :
+Affichés **uniquement si un fichier jalon est importé pour la période courante** (cf. §11.1). Soumis au **filtre de période** §12.2 (un jalon hors plage de dates est traité comme absent du fichier). Un **sous-tableau** dédié liste, **une ligne par jalon** présentant au moins une anomalie (colonnes : Projet · Jalon · étiquettes d'anomalie). Contrôles :
 
 1. Statut « Réalisé » ou « Anticipé » mais **% ≠ 100**.
 2. **% = 100** mais statut **∉** {Réalisé, Anticipé}.
@@ -306,43 +336,47 @@ Affichés **uniquement si un fichier jalon est importé pour la période courant
 - **Un unique fichier HTML autonome**, embarquant (inlinées) la structure, le style, la logique JavaScript et les bibliothèques nécessaires (parsing `.xlsx` type SheetJS). **Fonctionne hors ligne.**
 - Ouverture directe dans Chrome (`file://`), sans serveur.
 - L'extraction Excel est chargée via un champ d'import de fichier, **parsée et traitée intégralement côté client** (filtres, météos, tendances, calendrier de capacité, taux, totaux).
-- **Aucune donnée ne quitte le poste** : pas de backend, pas d'upload, pas d'appel sortant. Atout déterminant en contexte bancaire (confidentialité, DORA).
+- **Aucune donnée ne quitte le poste** : pas de backend, pas d'upload, pas d'appel sortant. Atout déterminant pour la confidentialité des données.
 
 ### 8.3 Persistance des données
 La continuité automatique et la persistance fichier sont **dissociées** :
 
 - **Continuité automatique (IndexedDB)** : l'application mémorise le dernier état dans le stockage local du navigateur et le **recharge au démarrage**, sans action de l'utilisateur. Fiable sous Chrome, y compris en `file://`.
-- **Persistance fichier (JSON)** — contenant l'**historique de tous les imports** (support du mécanisme N vs N-1 et au-delà) :
-  - Bouton **Sauvegarder** (présent sur **tous les écrans**) → télécharge `DB.json`.
-  - Bouton **Historiser** → télécharge un fichier horodaté `DB_AAAAMMJJ_HHMMSS.json` (évite les doublons, permet le versionnement).
-  - Bouton **Ouvrir un historique** → sélecteur de fichier pour recharger un JSON antérieur (retour arrière).
+- **Persistance fichier (JSON)** — contenant l'**historique de tous les imports** (support du mécanisme N vs N-1 et au-delà). Les trois actions suivantes sont représentées par une **icône seule** dans la barre d'application (infobulle au survol), à l'image des icônes ⚙ Paramétrage et ? Aide :
+  - Icône **disquette** — *Sauvegarder* (présente sur **tous les écrans**) → télécharge `DB.json`.
+  - Icône **historique / horloge** — *Historiser* → télécharge un fichier horodaté `DB_AAAAMMJJ_HHMMSS.json` (évite les doublons, permet le versionnement).
+  - Icône **dossier ouvert** — *Ouvrir un historique* → sélecteur de fichier pour recharger un JSON antérieur (retour arrière).
 - **Repli** si le stockage navigateur s'avère instable sur le poste : chargement manuel de `DB.json` au démarrage (un clic). L'outil reste pleinement fonctionnel.
 
 ### 8.4 Limite assumée
 En raison du bac à sable du navigateur, une page web **ne peut pas** créer/écraser ni relire silencieusement un fichier à un **chemin fixe** (ex. un `DB.json` placé automatiquement à côté du HTML). L'enregistrement passe donc par un téléchargement, et le rechargement par un sélecteur de fichier (ou par IndexedDB pour la continuité auto). L'API *File System Access* (qui s'en rapprocherait) est **indisponible en `file://`** et nécessiterait un contexte `localhost` (écarté avec Java).
 
 ### 8.5 Livrable
-**Un seul fichier HTML**, conservé sur le poste et ouvert hors ligne dans Chrome.
+**Un seul fichier HTML** (`Reporting_Portfolio.html`), conservé sur le poste et ouvert hors ligne dans Chrome.
+
+### 8.6 Absence de données d'exemple
+Le **code source de l'outil ne contient aucune donnée d'exemple ni jeu de test** (aucun projet, aucun jalon en dur). **Au premier lancement** (avant tout import), l'état est strictement **vide** sur les quatre écrans. Seule la **continuité automatique IndexedDB** (§8.3) restaure, sur le même poste/profil navigateur, l'état laissé lors d'une session antérieure — ce n'est pas une donnée d'exemple mais la persistance normale de l'usage réel de l'outil.
 
 ---
 
 ## 9. Style visuel & charte graphique (validé)
 
-Style retenu : **identité du Groupe BPCE**. Registre institutionnel et corporate, sobre, adapté à une diffusion en DSI bancaire.
+Style retenu : sobre, institutionnel, adapté à un usage interne en DSI.
 
 ### 9.1 Palette
 | Rôle | Couleur | Hex |
 |------|---------|-----|
-| Violet profond (barre d'application, titres, valeurs) | aubergine BPCE | `#300B3F` |
-| Mauve (accents, marqueur d'évolution, éléments actifs) | purple BPCE | `#714A80` |
-| Gris ardoise (texte secondaire) | comet | `#515772` |
+| Violet profond (barre d'application, titres, valeurs) | violet profond | `#300B3F` |
+| Mauve (accents, marqueur d'évolution, éléments actifs) | mauve accent | `#714A80` |
+| Gris ardoise (texte secondaire) | gris ardoise | `#515772` |
 | Fonds | blanc / gris violacé clair | `#FFFFFF` / `#F4F1F6` |
 
 Statuts sémantiques (météo) : vert `#2F9E6B`, jaune/ambre `#E0A21A`, rouge `#D6453F`.
 
 ### 9.2 Structure d'écran
-- **Barre d'application** en violet profond (`#300B3F`) : nom de l'outil « Reporting ATS » à gauche ; à droite, action principale **Importer l'extraction** (ouvre la sélection du `.xlsx` + les listes déroulantes mois/année — cf. §3.1), puis **Sauvegarder · Historiser · Ouvrir un historique** (présents sur tous les écrans — cf. §8.3).
-- **Bandeau de titre** : titre de l'écran + sous-titre, et **chips de filtres** (AEO, PIAT, Suivi Pulse : Oui, sélecteur de mois).
+- **Ordre des onglets dans la barre de navigation** *(évolution v0.13)* : **Synthèse portfolio** (§5) · **Synthèse budgétaire** (§6) · **Jalons Projets** (§11) · **Risk Management** (§7). Cet ordre d'affichage est **décorrélé de la numérotation des sections** ci-dessous, conservée pour l'historique de rédaction du document.
+- **Barre d'application** en violet profond (`#300B3F`) : logo (pastille mauve à point central, cf. §13) puis nom de l'outil « Reporting Portfolio » à gauche ; à droite, action principale **Importer Synthèse Projets** (ouvre la sélection du `.xlsx` + les listes déroulantes mois/année — cf. §3.1), puis les icônes **Sauvegarder · Historiser · Ouvrir un historique** (cf. §8.3), **⚙ Paramétrage** et **? Aide** (présents sur tous les écrans).
+- **Bandeau de titre** : titre de l'écran + sous-titre, et **chips de filtres** (valeurs d'intitulé actives, Suivi Portfolio : Oui, sélecteur de mois).
 - **Tableau** : une ligne par projet, séparateurs fins, fond clair.
 
 ### 9.3 Conventions iconographiques
@@ -371,12 +405,13 @@ Maquette de l'écran 1 « Synthèse portfolio » validée dans ce style (rendu S
 **Objectif :** suivre le delivery des projets, sécuriser le respect des jalons et identifier les zones de risque. Un **4ᵉ onglet** « Jalons Projets » est ajouté à la barre de navigation.
 
 ### 11.1 Source, import et appariement par période
-- Fichier « Export Pulse Jalon » (cf. §3.3) ; **premier onglet** lu.
-- **Colonnes attendues** : `ID initiative`, `Intitulé initiative`, `jalon`, `Échéance Initiale`, `Échéance actualisée IT`, `Echéance révisée Métier`, `Échéance finale`, `% Avancement`, `Statut`, `Cause de retard`, `Détails`, `Client / pôle`, `Client / Direction`, `DSI`, `Chef de projet`, `Jalon affiché dans Pulse`.
+- Fichier « Export Jalons » (cf. §3.3) ; **premier onglet** lu.
+- **Colonnes attendues** : `ID initiative`, `Intitulé initiative`, `jalon`, `Échéance Initiale`, `Échéance actualisée IT`, `Echéance révisée Métier`, `Échéance finale`, `% Avancement`, `Statut`, `Cause de retard`, `Détails`, `Client / pôle`, `Client / Direction`, `DSI`, `Chef de projet`, `Jalon affiché`.
 - **Clé de jointure** : `ID Initiative` vers l'« Extraction Projet ».
-- **Filtre** : on conserve **toutes les lignes**, restreintes aux **jalons des projets retenus** par les filtres §4 (AEO/PIAT + Suivi dans Pulse = Oui). **Pas** de filtre sur « Jalon affiché dans Pulse ».
+- **Filtre** : on conserve **toutes les lignes**, restreintes aux **jalons des projets retenus** par les filtres §4 (critère Intitulé + Suivi Portfolio = Oui). **Pas** de filtre sur « Jalon affiché ».
 - **Appariement par période** : les jalons ne sont croisés avec les projets que pour une **même période**. L'écran affiche les jalons de la **période projet courante** ; si aucune extraction jalon n'existe pour ce mois, l'écran affiche un **état vide** (invitation à importer le fichier jalon du mois). Les imports jalon sont **conservés par période** (comme les imports projet).
 - **Dépendances** : l'écran nécessite l'import **projet** (jointure, filtre, météo) **et** l'import **jalon** de la même période ; à défaut, état vide.
+- **Filtre de période complémentaire** *(évolution v0.14)* : une plage de dates (début/fin), configurable en §12.2, restreint en amont les jalons retenus pour cet écran — cf. détail §12.2.
 
 ### 11.2 Définitions
 - **Échéance de référence** : 1ʳᵉ renseignée parmi finale → révisée Métier → actualisée IT → initiale.
@@ -397,22 +432,48 @@ Maquette de l'écran 1 « Synthèse portfolio » validée dans ce style (rendu S
 - **Écart IT / Métier** = nombre de jalons en divergence IT vs Métier.
 - **À livrer ≤ 30 j** = nombre de jalons à venir dont l'échéance de référence ≤ date d'observation + 30 jours.
 
-### 11.4 Tableau des jalons — axe de vue sélectionnable
-- **Colonnes** : Projet · Jalon · Chef de projet · Direction · Échéance initiale · Échéance de référence · Dérive (j) · % Avancement · Statut · Cause de retard · **Météo globale projet** (icône, pour le croisement). Colonnes **triables** (cf. tri général, §5/§6).
-- **Sélecteur d'axe de vue** (un seul actif à la fois) :
-  - **En retard** : jalons en retard.
-  - **À risque imminent** : jalon actif, (échéance de référence ≤ date d'obs + 30 j **ou** déjà en retard) **et** (% ≤ 25 **ou** statut ∈ {Non commencé, En retard}).
-  - **Échéance ≤ 30 j / ≤ 60 j / ≤ 90 j** : jalons **à venir** dont l'échéance de référence ≤ date d'obs + N jours (**bandes cumulatives**).
-  - **Replanifiés** : jalons replanifiés.
-  - **Tous** : tous les jalons retenus.
+### 11.4 Tableau des jalons — axe de vue et filtres rapides *(évolution v0.15)*
 
-### 11.5 Cartographie du risque
-- **Répartition par statut** : effectif par valeur de statut (y compris vide).
-- **Concentration** : nombre de jalons **en retard** et **à risque imminent**, agrégés **par Direction** et **par chef de projet**.
-- **Risques masqués** : projets dont la **météo globale est verte** et qui portent **≥ 1 jalon en retard** (risque sous-déclaré au niveau projet).
+**Ordre des blocs de l'écran :**
+1. Bandeau de KPIs (§11.3)
+2. Barre de segments (axe de vue)
+3. Bloc de filtres rapides (§11.4.1)
+4. Tableau des jalons
+
+**Barre de segments** (un seul actif à la fois) :
+- **Tous** *(1ère position, sélectionné par défaut)* : tous les jalons retenus.
+- **En retard** : jalons en retard.
+- **À risque imminent** : jalon actif, (échéance de référence ≤ date d'obs + 30 j **ou** déjà en retard) **et** (% ≤ 25 **ou** statut ∈ {Non commencé, En retard}).
+- **Échéance ≤ 30 j / ≤ 60 j / ≤ 90 j** : jalons **à venir** dont l'échéance de référence ≤ date d'obs + N jours (**bandes cumulatives**).
+- **Replanifiés** : jalons replanifiés.
+
+**Colonnes du tableau** : Projet · Jalon · Chef de projet · Direction · Échéance initiale · Échéance de référence · Dérive (j) · % Avancement · Statut · Cause de retard · **Météo globale projet** (icône). Colonnes **triables**.
+
+#### 11.4.1 Filtres rapides
+
+Bloc affiché entre la barre de segments et le tableau. Quatre filtres, chacun sous forme de **chips cliquables** (affichant le libellé et l'effectif dans les données courantes), présentés dans l'ordre : **Projet → Statut → Direction → Chef de projet**.
+
+**Règles générales :**
+- **Multi-valeurs** : plusieurs chips peuvent être actives simultanément au sein d'un même filtre.
+- **Logique intra-filtre** : OU entre les valeurs sélectionnées (ex. « Direction A » OU « Direction B »).
+- **Logique inter-filtres** : ET cumulatif (ex. Direction filtrée ET Statut filtré ET Segment actif).
+- **Désélection** : second clic sur une chip active → désélection de cette valeur.
+- **Réinitialisation globale** : bouton **« Réinitialiser les filtres »** remet les quatre filtres à zéro en une action.
+- **État initial** : tous les filtres vides → tous les jalons du segment actif visibles.
+- **Persistance** : les sélections actives sont conservées lors des changements d'écran dans la session courante ; **réinitialisées à la réouverture de l'outil** (pas de persistance IndexedDB ni DB.json pour ces filtres).
+- **Effectifs affichés** : chaque chip indique le nombre de jalons correspondant dans la **liste globale filtrée par segment** (et non dans le tableau résultant de tous les filtres combinés), pour rester lisible même en multi-sélection.
+
+**Filtre Projet** (cas particulier) : les noms de projets pouvant être nombreux et longs, l'affichage des chips se fait après saisie dans un **champ de recherche libre** (correspondance « contient », insensible à la casse). La liste des projets correspondants est proposée en suggestions ; un clic ajoute le projet comme chip active. Les chips sélectionnées restent visibles au-dessus du champ de recherche. Le filtre Projet s'applique avec la même logique OU intra-filtre et ET inter-filtres que les autres.
+
+**Filtres Statut, Direction, Chef de projet** : les chips de chaque filtre sont générées dynamiquement à partir des valeurs présentes dans les jalons de la période chargée.
+
+### 11.5 Risques masqués et cartographie *(évolution v0.15)*
+
+- **Risques masqués** : déplacés vers l'écran Risk Management (§7.6), entre la zone cohérence météos et les contrôles de cohérence données. Plus présents sur cet écran.
+- **Cartographie** (camembert, tableaux concentration par direction / chef de projet) : **supprimée**. Les données direction et chef de projet sont exploitées via les filtres rapides (§11.4.1). Le camembert de répartition par statut (v0.13) est **supprimé** et remplacé par les chips de filtre Statut (§11.4.1).
 
 ### 11.6 Cohérence des données jalons
-Les contrôles qualité propres aux jalons sont restitués dans l'écran **Risk Management** (§7.6.2), et non sur cet écran, conformément au scénario retenu (mutualisation de la zone « cohérence des données »).
+Les contrôles qualité propres aux jalons sont restitués dans l'écran **Risk Management** (§7.7.2), et non sur cet écran, conformément au scénario retenu (mutualisation de la zone « cohérence des données »).
 
 ---
 
@@ -422,20 +483,48 @@ Les contrôles qualité propres aux jalons sont restitués dans l'écran **Risk 
 
 ### 12.1 Section « Filtres d'entrée »
 
-- **Intitulé projet** : saisie d'une **liste de valeurs** sous forme d'étiquettes (ajout / suppression). Correspondance `%valeur%` insensible à la casse, logique OU (cf. §4). Pré-remplie avec « AEO » et « PIAT ». Liste vide → critère non appliqué.
-- **Suivi dans Pulse** : sélecteur **« Oui » / « ALL »** (cf. §4). Valeur par défaut : « Oui ».
+- **Intitulé projet** : saisie d'une **liste de valeurs** sous forme d'étiquettes (ajout / suppression). Correspondance `%valeur%` insensible à la casse, logique OU (cf. §4). **Vide par défaut** (critère non appliqué). Liste vide → critère non appliqué.
+- **Suivi Portfolio** : sélecteur **« Oui » / « ALL »** (cf. §4). Valeur par défaut : « Oui ».
 
-### 12.2 Comportement
+### 12.2 Section « Période d'analyse des jalons » *(évolution v0.14)*
 
-- **Application dynamique** : toute modification est prise en compte **immédiatement sur tous les écrans**, sans réimport (le filtrage s'opère à l'affichage, cf. §3.1 / §4).
-- **Persistance** : les paramètres font partie de l'**état de l'outil** — mémorisés en continuité automatique (IndexedDB) et inclus dans les fichiers **Sauvegarder / Historiser** (`DB.json`), donc restaurés à la réouverture.
+- **Deux champs date** : **Date de début** et **Date de fin**.
+- **Valeurs par défaut** *(au tout premier lancement uniquement — cf. §12.3)* : Date de début = **1ᵉʳ janvier de l'année calendaire en cours** (année système réelle, indépendante du mois de la période projet affichée) ; Date de fin = **vide**.
+- **Champ comparé** : l'**échéance de référence** du jalon (§11.2 — coalescence finale → révisée Métier → actualisée IT → initiale).
+- **Absence de Date de début** : aucune borne basse — tous les jalons antérieurs sont retenus.
+- **Absence de Date de fin** : aucune borne haute — tous les jalons postérieurs sont retenus.
+- **Jalons sans aucune échéance renseignée** (anomalie « jalon non exploitable », §7.6.2 contrôle 5) : **toujours inclus**, quel que soit le filtre de date — pour ne jamais masquer silencieusement cette anomalie de qualité de données.
+- **Portée — filtre transverse** : appliqué en amont de l'ensemble des traitements jalons, **comme si les jalons hors plage n'étaient pas présents dans le fichier importé**. S'applique :
+  - à l'écran **Jalons Projets** (§11) : bandeau de KPIs (§11.3), tableau et segments (§11.4), cartographie (§11.5) ;
+  - à l'écran **Risk Management** : contrôles de cohérence des données — jalons (§7.7.2).
+- **Indicateur visuel** : une **chip** rappelant la période active est affichée sur les écrans **Jalons Projets** et **Risk Management** (ex. « Jalons : depuis 01/01/2026 », « Jalons : 01/01/2026 → 30/06/2026 », ou « Jalons : toutes périodes » si les deux bornes sont vides).
+
+### 12.3 Comportement
+
+- **Application dynamique** : toute modification est prise en compte **immédiatement sur tous les écrans**, sans réimport (le filtrage s'opère à l'affichage, cf. §3.1 / §4 / §12.2).
+- **Persistance** : les paramètres font partie de l'**état de l'outil** — mémorisés en continuité automatique (IndexedDB) et inclus dans les fichiers **Sauvegarder / Historiser** (`DB.json`), donc restaurés à la réouverture. La valeur par défaut de la Date de début (§12.2) n'est positionnée qu'au **tout premier lancement** (absence d'état sauvegardé) ; toute modification ultérieure — y compris l'effacement du champ — est conservée telle quelle, sans réinitialisation automatique.
 
 ---
 
-## 13. Reste à spécifier
+## 13. Easter egg *(évolution v0.13)*
+
+**Déclencheur :** **Ctrl + clic** sur le **logo** dans la barre d'application (pastille mauve à point blanc central, à gauche du nom de l'outil). Un clic simple sans la touche Ctrl n'a aucun effet — ce geste discret renforce le caractère caché de l'easter egg.
+
+**Contenu :** reconstitution stylisée du **premier easter egg de l'histoire du jeu vidéo**, créé par Warren Robinett dans *Adventure* (Atari 2600, 1979) — un message caché révélant le nom de son créateur. L'écran central affiche, dans une esthétique Atari 2600 (fond noir, texte en gros pixels façon bloc, majuscules, effet clignotant) :
+- Le nom **« NICOLAS PIQUOT »** ;
+- Un lien vers le profil LinkedIn (`www.linkedin.com/in/npiquot`), **cliquable**, qui s'ouvre dans un **nouvel onglet du navigateur**.
+
+**Retour à l'écran normal :** soit un **nouveau clic sur le logo**, soit un **bouton « Retour »** affiché sur l'écran easter egg — les deux ramènent à l'écran qui était affiché juste avant le déclenchement.
+
+**Portée :** écran ludique, **hors navigation principale** (comme Paramétrage et Aide) ; ne modifie ni ne consulte l'état de l'outil (données, filtres, paramètres).
+
+---
+
+## 14. Reste à spécifier
 
 - Autres écrans / vues envisagés : fiche projet détaillée, vue par direction, etc. *(à définir)*.
 - Destinataires et modalités de restitution / diffusion.
+- Mise à jour du guide utilisateur (renommage `Reporting_Portfolio` + captures d'écran reflétant les évolutions v0.13 : ordre des onglets, camembert, easter egg, icônes).
 
 ---
 

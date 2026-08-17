@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portail Outils — Architecture &amp; Standards Technologiques</title>
+<style>
+  :root{
+    --violet:#300B3F;
+    --violet-clair:#4A1B5C;
+    --mauve:#714A80;
+    --ardoise:#515772;
+    --ambre:#E0A33E;
+    --fond:#F7F6F8;
+    --carte:#FFFFFF;
+    --trait:#E3DFE8;
+    --texte:#241030;
+    --texte-doux:#6B6478;
+
+    --police:"Calibri","Carlito","Segoe UI",system-ui,-apple-system,sans-serif;
+    --rayon:10px;
+    --max:1120px;
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{margin:0;padding:0;}
+
+  body{
+    font-family:var(--police);
+    background:var(--fond);
+    color:var(--texte);
+    font-size:16px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .zone{
+    max-width:var(--max);
+    margin:0 auto;
+    padding:0 32px;
+  }
+
+  /* ---------- Bandeau ---------- */
+
+  .bandeau{
+    background:linear-gradient(115deg, var(--violet) 0%, var(--violet) 55%, var(--violet-clair) 100%);
+    color:#fff;
+    position:relative;
+    overflow:hidden;
+    border-bottom:3px solid var(--ambre);
+  }
+
+  /* trame discrète évoquant un plan d'architecture */
+  .bandeau::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.055) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.055) 1px, transparent 1px);
+    background-size:44px 44px;
+    pointer-events:none;
+  }
+
+  .bandeau .zone{
+    position:relative;
+    z-index:1;
+    padding-top:44px;
+    padding-bottom:44px;
+  }
+
+  .surtitre{
+    font-size:12.5px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--ambre);
+    font-weight:700;
+    margin:0 0 10px;
+  }
+
+  .bandeau h1{
+    margin:0;
+    font-size:clamp(28px,3.6vw,42px);
+    font-weight:700;
+    letter-spacing:-.01em;
+    line-height:1.15;
+  }
+
+  .accroche{
+    margin:14px 0 0;
+    max-width:62ch;
+    color:rgba(255,255,255,.78);
+    font-size:16.5px;
+  }
+
+  /* ---------- Recherche (affichée au-delà de 5 outils) ---------- */
+
+  .recherche{display:none;margin-top:26px;}
+  .recherche.visible{display:block;}
+
+  .recherche input{
+    font-family:var(--police);
+    font-size:15px;
+    width:100%;
+    max-width:380px;
+    padding:11px 14px;
+    border:1px solid rgba(255,255,255,.28);
+    border-radius:var(--rayon);
+    background:rgba(255,255,255,.09);
+    color:#fff;
+  }
+  .recherche input::placeholder{color:rgba(255,255,255,.55);}
+  .recherche input:focus{
+    outline:2px solid var(--ambre);
+    outline-offset:2px;
+    background:rgba(255,255,255,.14);
+  }
+
+  /* ---------- Grille ---------- */
+
+  main{padding:44px 0 64px;}
+
+  .entete-section{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+  }
+
+  .entete-section h2{
+    margin:0;
+    font-size:19px;
+    font-weight:700;
+    color:var(--violet);
+  }
+
+  .compteur{font-size:13.5px;color:var(--texte-doux);margin:0;}
+
+  .grille{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(330px,1fr));
+    gap:20px;
+  }
+
+  .carte{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    background:var(--carte);
+    border:1px solid var(--trait);
+    border-radius:var(--rayon);
+    padding:24px 24px 20px;
+    text-decoration:none;
+    color:inherit;
+    overflow:hidden;
+    transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+
+  /* filet ambre révélé au survol */
+  .carte::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:3px;
+    background:var(--ambre);
+    transform:scaleY(0);
+    transform-origin:top;
+    transition:transform .22s ease;
+  }
+
+  .carte:hover,
+  .carte:focus-visible{
+    border-color:var(--mauve);
+    box-shadow:0 6px 20px rgba(48,11,63,.10);
+    transform:translateY(-2px);
+  }
+  .carte:hover::before,
+  .carte:focus-visible::before{transform:scaleY(1);}
+
+  .carte:focus-visible{
+    outline:2px solid var(--violet);
+    outline-offset:3px;
+  }
+
+  .carte-haut{
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+    margin-bottom:14px;
+  }
+
+  .pictogramme{
+    flex:0 0 auto;
+    width:42px;
+    height:42px;
+    border-radius:9px;
+    background:rgba(113,74,128,.10);
+    color:var(--mauve);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .pictogramme svg{width:22px;height:22px;display:block;}
+
+  .titre-outil{
+    margin:0;
+    font-size:18px;
+    font-weight:700;
+    color:var(--violet);
+    line-height:1.3;
+  }
+
+  .sous-titre{
+    margin:2px 0 0;
+    font-size:13px;
+    color:var(--texte-doux);
+  }
+
+  .description{
+    margin:0 0 18px;
+    font-size:14.5px;
+    color:var(--ardoise);
+    flex:1 1 auto;
+  }
+
+  .pied-carte{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    padding-top:14px;
+    border-top:1px solid var(--trait);
+  }
+
+  .etiquette{
+    font-size:11.5px;
+    font-weight:700;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    padding:3px 9px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .etiquette.stable{background:rgba(81,87,114,.10);color:var(--ardoise);}
+  .etiquette.beta{background:rgba(224,163,62,.20);color:#8A5F12;}
+  .etiquette.avenir{background:rgba(113,74,128,.12);color:var(--mauve);}
+
+  .version{font-size:12.5px;color:var(--texte-doux);}
+
+  .fleche{
+    margin-left:auto;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--mauve);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .fleche i{font-style:normal;transition:transform .18s ease;display:inline-block;}
+  .carte:hover .fleche i{transform:translateX(3px);}
+
+  /* Outil pas encore déployé */
+  .carte.indisponible{
+    cursor:default;
+    background:#FBFAFC;
+    border-style:dashed;
+  }
+  .carte.indisponible:hover{
+    transform:none;
+    box-shadow:none;
+    border-color:var(--trait);
+  }
+  .carte.indisponible:hover::before{transform:scaleY(0);}
+  .carte.indisponible .titre-outil{color:var(--ardoise);}
+  .carte.indisponible .pictogramme{background:rgba(81,87,114,.08);color:var(--ardoise);}
+  .carte.indisponible .fleche{color:var(--texte-doux);font-weight:400;}
+
+  .vide{
+    padding:40px 24px;
+    text-align:center;
+    color:var(--texte-doux);
+    border:1px dashed var(--trait);
+    border-radius:var(--rayon);
+    font-size:15px;
+  }
+
+  /* ---------- Pied de page ---------- */
+
+  footer{
+    border-top:1px solid var(--trait);
+    background:#fff;
+    padding:24px 0;
+  }
+  footer .zone{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    font-size:13.5px;
+    color:var(--texte-doux);
+  }
+  footer strong{color:var(--ardoise);font-weight:600;}
+
+  @media (max-width:640px){
+    .zone{padding:0 20px;}
+    .bandeau .zone{padding-top:34px;padding-bottom:34px;}
+    .grille{grid-template-columns:1fr;}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;animation:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<header class="bandeau">
+  <div class="zone">
+    <p class="surtitre">DSI Corporate Banking · Département ATS</p>
+    <h1>Portail des outils Architecture&nbsp;&amp; Standards Technologiques</h1>
+    <p class="accroche">Les applications internes du département, accessibles directement depuis le navigateur. Aucune installation, les données saisies restent sur votre poste.</p>
+    <div class="recherche" id="zoneRecherche">
+      <input type="search" id="champRecherche" placeholder="Rechercher un outil" aria-label="Rechercher un outil">
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="zone">
+    <div class="entete-section">
+      <h2>Outils disponibles</h2>
+      <p class="compteur" id="compteur"></p>
+    </div>
+    <div class="grille" id="grille"></div>
+  </div>
+</main>
+
+<footer>
+  <div class="zone">
+    <div>Département <strong>Architecture &amp; Standards Technologiques</strong> — DSI Corporate Banking</div>
+    <div>Portail v1.0 · Une demande d'évolution&nbsp;? Contactez l'équipe Gouvernance.</div>
+  </div>
+</footer>
+
+<script>
+/* =========================================================================
+   CONFIGURATION DES OUTILS
+   -------------------------------------------------------------------------
+   Pour ajouter un outil : dupliquer un bloc ci-dessous et adapter les champs.
+   Aucune autre partie du fichier n'est a modifier.
+
+   nom          : intitule affiche sur la carte
+   sousTitre    : precision courte sous le titre (facultatif)
+   fichier      : nom du fichier HTML, depose a la racine du serveur
+   description  : 1 a 2 phrases decrivant ce que fait l'outil
+   version      : chaine libre, ex. "v1.6" (facultatif)
+   statut       : "stable" | "beta" | "avenir"
+   pictogramme  : "quadrant" | "portfolio" | "presentation" | "donnees"
+                  | "securite" | "defaut"
+   disponible   : true = carte cliquable / false = carte grisee, non cliquable
+
+   Variante : deposer un fichier tools.json a la racine du serveur, contenant
+   un tableau au meme format. S'il est present, il remplace la liste
+   ci-dessous, ce qui permet d'ajouter un outil sans toucher au HTML.
+   ========================================================================= */
+
+const OUTILS = [
+  {
+    nom: "TIME Budget",
+    sousTitre: "Cadrage budgétaire 2027",
+    fichier: "time-budget.html",
+    description: "Positionne les applications du portefeuille sur le quadrant TIME (Invest, Mitigate, Tolerate, Eliminate) et visualise l'évolution 2026 → 2027. Import depuis le canevas Excel.",
+    version: "v1.6",
+    statut: "stable",
+    pictogramme: "quadrant",
+    disponible: true
+  },
+  {
+    nom: "Reporting Portfolio",
+    sousTitre: "Suivi du portefeuille projets",
+    fichier: "reporting-portfolio.html",
+    description: "Consolide portefeuille, budget, jalons et risques sur quatre écrans, avec cartographie des jalons et filtres paramétrables par périmètre.",
+    version: "v0.14",
+    statut: "beta",
+    pictogramme: "portfolio",
+    disponible: true
+  },
+  {
+    nom: "Générateur de présentations",
+    sousTitre: "Mise en forme des supports",
+    fichier: "generateur-ppt.html",
+    description: "Produit des supports PowerPoint à la charte à partir des données saisies. Outil en cours de construction.",
+    version: "",
+    statut: "avenir",
+    pictogramme: "presentation",
+    disponible: false
+  }
+];
+
+/* ===================== Fin de la configuration ===================== */
+
+const PICTOGRAMMES = {
+  quadrant: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M12 21V3M3 12h18" stroke-dasharray="2 2.5"/><circle cx="7.5" cy="7.5" r="1.8" fill="currentColor" stroke="none"/><circle cx="16.5" cy="16" r="1.8" fill="currentColor" stroke="none"/></svg>',
+  portfolio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>',
+  presentation: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M12 16v4M8.5 20h7"/></svg>',
+  donnees: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>',
+  securite: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v6c0 4.5-3.1 7.9-7.5 9-4.4-1.1-7.5-4.5-7.5-9V6z"/><path d="M9.5 12l1.8 1.8 3.4-3.6"/></svg>',
+  defaut: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>'
+};
+
+const LIBELLES_STATUT = { stable:"Stable", beta:"Bêta", avenir:"À venir" };
+
+const grille = document.getElementById("grille");
+const compteur = document.getElementById("compteur");
+const champRecherche = document.getElementById("champRecherche");
+const zoneRecherche = document.getElementById("zoneRecherche");
+
+let listeOutils = OUTILS;
+
+function echapper(valeur){
+  return String(valeur == null ? "" : valeur).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+
+function construireCarte(outil){
+  var disponible = outil.disponible !== false;
+  var statut = LIBELLES_STATUT[outil.statut] ? outil.statut : "stable";
+  var picto = PICTOGRAMMES[outil.pictogramme] || PICTOGRAMMES.defaut;
+  var balise = disponible ? "a" : "div";
+  var attributs = disponible
+    ? ' href="' + echapper(outil.fichier) + '"'
+    : ' aria-disabled="true"';
+
+  return "<" + balise + ' class="carte' + (disponible ? "" : " indisponible") + '"' + attributs + ">"
+    + '<div class="carte-haut">'
+    +   '<div class="pictogramme" aria-hidden="true">' + picto + "</div>"
+    +   "<div>"
+    +     '<h3 class="titre-outil">' + echapper(outil.nom) + "</h3>"
+    +     (outil.sousTitre ? '<p class="sous-titre">' + echapper(outil.sousTitre) + "</p>" : "")
+    +   "</div>"
+    + "</div>"
+    + '<p class="description">' + echapper(outil.description) + "</p>"
+    + '<div class="pied-carte">'
+    +   '<span class="etiquette ' + statut + '">' + LIBELLES_STATUT[statut] + "</span>"
+    +   (outil.version ? '<span class="version">' + echapper(outil.version) + "</span>" : "")
+    +   '<span class="fleche">' + (disponible ? 'Ouvrir <i aria-hidden="true">&rarr;</i>' : "Bientôt disponible") + "</span>"
+    + "</div>"
+    + "</" + balise + ">";
+}
+
+function afficher(filtre){
+  var terme = (filtre || "").trim().toLowerCase();
+  var resultats = terme
+    ? listeOutils.filter(function(o){
+        return (o.nom + " " + (o.sousTitre || "") + " " + (o.description || "")).toLowerCase().indexOf(terme) !== -1;
+      })
+    : listeOutils;
+
+  if(resultats.length === 0){
+    grille.innerHTML = '<p class="vide">Aucun outil ne correspond à cette recherche.</p>';
+  } else {
+    grille.innerHTML = resultats.map(construireCarte).join("");
+  }
+
+  var nbDisponibles = listeOutils.filter(function(o){ return o.disponible !== false; }).length;
+  compteur.textContent = terme
+    ? resultats.length + (resultats.length > 1 ? " résultats" : " résultat")
+    : nbDisponibles + (nbDisponibles > 1 ? " outils accessibles" : " outil accessible");
+}
+
+function initialiser(){
+  if(listeOutils.length > 5){
+    zoneRecherche.classList.add("visible");
+    champRecherche.addEventListener("input", function(e){ afficher(e.target.value); });
+  }
+  afficher("");
+}
+
+/* Si un fichier tools.json est present a la racine, il fait reference. */
+if(typeof fetch === "function"){
+  fetch("tools.json", { cache: "no-store" })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(donnees){
+      if(Array.isArray(donnees) && donnees.length > 0){ listeOutils = donnees; }
+    })
+    .catch(function(){ /* pas de tools.json : on garde la liste du fichier */ })
+    .finally(initialiser);
+} else {
+  initialiser();
+}
+</script>
+
+</body>
+</html>

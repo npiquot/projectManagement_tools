@@ -1,0 +1,32 @@
+[
+  {
+    "nom": "TIME Budget",
+    "sousTitre": "Cadrage budgétaire 2027",
+    "fichier": "time-budget.html",
+    "description": "Positionne les applications du portefeuille sur le quadrant TIME (Invest, Mitigate, Tolerate, Eliminate) et visualise l'évolution 2026 → 2027. Import depuis le canevas Excel.",
+    "version": "v1.6",
+    "statut": "stable",
+    "pictogramme": "quadrant",
+    "disponible": true
+  },
+  {
+    "nom": "Reporting Portfolio",
+    "sousTitre": "Suivi du portefeuille projets",
+    "fichier": "reporting-portfolio.html",
+    "description": "Consolide portefeuille, budget, jalons et risques sur quatre écrans, avec cartographie des jalons et filtres paramétrables par périmètre.",
+    "version": "v0.14",
+    "statut": "beta",
+    "pictogramme": "portfolio",
+    "disponible": true
+  },
+  {
+    "nom": "Générateur de présentations",
+    "sousTitre": "Mise en forme des supports",
+    "fichier": "generateur-ppt.html",
+    "description": "Produit des supports PowerPoint à la charte à partir des données saisies. Outil en cours de construction.",
+    "version": "",
+    "statut": "avenir",
+    "pictogramme": "presentation",
+    "disponible": false
+  }
+]

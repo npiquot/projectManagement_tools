@@ -221,6 +221,24 @@ details.help-section summary .hico{width:26px;height:26px;border-radius:7px;back
 .egg-link:hover{color:var(--violet);border-color:var(--violet)}
 .egg-back{margin-top:2px}
 
+/* Toggle N-1 (local au Portfolio) */
+.toggle-n1{appearance:none;border:1px solid var(--mauve-line);background:#fff;color:var(--slate);font:inherit;font-size:12px;padding:6px 12px;border-radius:20px;cursor:pointer}
+.toggle-n1:hover{background:var(--panel)}
+.toggle-n1.on{background:var(--mauve);border-color:var(--mauve);color:#fff}
+.toggle-n1.disabled{opacity:.4;cursor:default}
+
+/* Filter panel (jalons) */
+.filter-panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.fp-header{display:flex;align-items:center;margin-bottom:12px}
+.fp-title{font-size:13px;font-weight:500;color:var(--violet)}
+.fp-section{margin-bottom:12px}
+.fp-section:last-child{margin-bottom:0}
+.fp-label{font-size:11.5px;color:var(--hint);font-weight:400;margin-bottom:6px}
+
+/* Météo N-1 (portfolio) */
+.health-prev{opacity:.65;margin-top:3px;font-size:12px}
+.prev-label{font-size:10px;color:var(--hint);margin-right:4px}
+
 /* Modal */
 .overlay{position:fixed;inset:0;background:rgba(48,11,63,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
 .overlay[hidden]{display:none}
@@ -245,7 +263,7 @@ details.help-section summary .hico{width:26px;height:26px;border-radius:7px;back
 </head>
 <body>
 <header class="appbar">
-  <div class="brand"><span class="mark" title="?" onclick="APP.toggleEasterEgg()"></span>Reporting Portfolio</div>
+  <div class="brand"><span class="mark" title="?" onclick="if(event.ctrlKey)APP.toggleEasterEgg()"></span>Reporting Portfolio</div>
   <div class="actions">
     <button class="btn primary" onclick="APP.openImport('projet')">Importer Synthèse Projets</button>
     <button class="btn ghost" onclick="APP.openImport('jalon')">Importer les jalons</button>
@@ -340,7 +358,7 @@ function classify(h){
   if(s.indexOf('client')>-1||s.indexOf('pole')>-1) return 'client';
   if(s.indexOf('objectif')>-1||s.indexOf('enjeu')>-1) return 'objectifs';
   if(s==='status'||s==='statut') return 'status';
-  if(s.indexOf('suivi')>-1&&s.indexOf('pulse')>-1) return 'pulse';
+  if(s.indexOf('suivi')>-1&&(s.indexOf('pulse')>-1||s.indexOf('portfolio')>-1)) return 'pulse';
   if(s.indexOf('date')>-1&&s.indexOf('saisie')>-1) return 'dateSaisie';
   if(s.indexOf('realisation')>-1) return 'realisations';
   if(s.indexOf('risque')>-1||s.indexOf('mitigation')>-1) return 'risques';
@@ -431,12 +449,12 @@ function icoAnomaly(type){
 }
 
 /* ---------- state & persistence ---------- */
-var state={periods:{},jalons:{},settings:{titleFilters:['AEO','PIAT'],pulseMode:'oui'},currentKey:null,unit:'ke'};
+var state={periods:{},jalons:{},settings:{titleFilters:[],pulseMode:'oui'},currentKey:null,unit:'ke'};
 function normState(){
   if(!state.periods) state.periods={};
   if(!state.jalons) state.jalons={};
   if(!state.settings) state.settings={};
-  if(!Array.isArray(state.settings.titleFilters)) state.settings.titleFilters=['AEO','PIAT'];
+  if(!Array.isArray(state.settings.titleFilters)) state.settings.titleFilters=[];
   if(state.settings.pulseMode!=='oui'&&state.settings.pulseMode!=='all') state.settings.pulseMode='oui';
   if(!Object.prototype.hasOwnProperty.call(state.settings,'jalonDateDebut')){ state.settings.jalonDateDebut=new Date().getFullYear()+'-01-01'; }
   if(!Object.prototype.hasOwnProperty.call(state.settings,'jalonDateFin')){ state.settings.jalonDateFin=''; }
@@ -461,7 +479,7 @@ function openImport(kind){
   currentImportKind=(kind==='jalon')?'jalon':'projet';
   document.getElementById('modalTitle').textContent=currentImportKind==='jalon'?'Importer les jalons':'Importer Synthèse Projets';
   document.getElementById('modalDesc').textContent=currentImportKind==='jalon'
-    ? "Sélectionnez le fichier « Export Pulse Jalon » (.xlsx), puis la période concernée. Le premier onglet est lu."
+    ? "Sélectionnez le fichier « Export Jalons » (.xlsx), puis la période concernée. Le premier onglet est lu."
     : "Sélectionnez le fichier .xlsx issu de l'outil de pilotage projet, puis la période concernée.";
   var sm=document.getElementById('selMonth'); sm.innerHTML='';
   var now=new Date(), curM=now.getMonth()+1;
@@ -518,7 +536,7 @@ function openHistorique(file){
   var fr=new FileReader();
   fr.onload=function(){
     try{ var o=JSON.parse(fr.result);
-      if(o&&o.periods){ state=Object.assign({periods:{},jalons:{},settings:{titleFilters:['AEO','PIAT'],pulseMode:'oui'},currentKey:null,unit:'ke'},o); normState(); if(!state.currentKey){ var ks=periodKeys(); state.currentKey=ks[ks.length-1]||null; } idbSave(); render(); toast('Historique chargé.'); }
+      if(o&&o.periods){ state=Object.assign({periods:{},jalons:{},settings:{titleFilters:[],pulseMode:'oui'},currentKey:null,unit:'ke'},o); normState(); if(!state.currentKey){ var ks=periodKeys(); state.currentKey=ks[ks.length-1]||null; } idbSave(); render(); toast('Historique chargé.'); }
       else toast('Fichier JSON non reconnu.');
     }catch(e){ toast('JSON invalide.'); }
   };
@@ -527,10 +545,12 @@ function openHistorique(file){
 
 /* ---------- rendering ---------- */
 var activeScreen='portfolio';
-var jalonSeg='retard';
+var jalonSeg='tous';
 var jalonStatutFilter=null;
+var jalonFilters={projets:[],statuts:[],directions:[],chefs:[]};
+var showN1Only=false;
 var eggPrevScreen='portfolio';
-var sortState={portfolio:null,budget:null,coh:null,dq:null,jalons:null,jdq:null};
+var sortState={portfolio:null,budget:null,coh:null,dq:null,jalons:null,jdq:null,masq:null};
 var SCREENS=[['portfolio','Synthèse portfolio'],['budget','Synthèse budgétaire'],['jalons','Jalons Projets'],['risk','Risk Management']];
 
 function render(){
@@ -540,7 +560,7 @@ function render(){
   var cpRaw=currentPeriod();
   var view=cpRaw?Object.assign({},cpRaw,{projects:cpRaw.projects.filter(passFilters)}):null;
   var fchips=(state.settings.titleFilters||[]).map(function(v){return '<span class="chip on">'+esc(v)+'</span>';}).join('')||'<span class="chip">Intitulé : tous</span>';
-  var pchip='<span class="chip">Suivi Pulse : '+(state.settings.pulseMode==='all'?'ALL':'Oui')+'</span>';
+  var pchip='<span class="chip">Suivi Portfolio : '+(state.settings.pulseMode==='all'?'ALL':'Oui')+'</span>';
   document.getElementById('submeta').innerHTML=fchips+pchip+(view?'<span class="chip">'+esc(view.label)+'</span>':'');
   var el=document.getElementById('screen');
   if(activeScreen==='settings'){ el.innerHTML=renderSettings(); return; }
@@ -566,6 +586,12 @@ function changedVsPrev(p){
 
 function renderPortfolio(cp){
   var prev=prevPeriod();
+  var prevById={};
+  if(prev) prev.projects.forEach(function(p){ prevById[String(p.idInit)]=p; });
+  var projects=showN1Only ? cp.projects.filter(changedVsPrev) : cp.projects;
+  var n1tool=prev
+    ? '<button class="toggle-n1'+(showN1Only?' on':'')+'" onclick="APP.toggleN1Only()" title="Filtrer sur les projets ayant évolué vs '+esc(prev.label)+'">Évolutions N-1</button>'
+    : '<span class="toggle-n1 disabled" title="Aucune période précédente disponible">Évolutions N-1</span>';
   var cols=[
     {label:'Projet',type:'text',get:function(p){return p.intitule;},render:function(p){var obj=esc(String(p.objectifs||'').slice(0,100));return '<div class="pname">'+esc(p.intitule)+'</div><div class="pcp">'+esc(p.cp)+'</div><div class="pobj">'+obj+(String(p.objectifs||'').length>100?'\u2026':'')+'</div>';}},
     {label:'Statut',type:'text',get:function(p){return p.status;},render:function(p){return esc(p.status);}},
@@ -577,10 +603,18 @@ function renderPortfolio(cp){
     {label:'Santé',type:'meteo',get:function(p){return meteo(p.meteo_globale);},render:function(p){
       var dots='<span class="dot '+(meteo(p.meteo_budget)||'none')+'"></span><span class="dot '+(meteo(p.meteo_planning)||'none')+'"></span><span class="dot '+(meteo(p.meteo_perimetre)||'none')+'"></span>';
       var evol=changedVsPrev(p)?'<span class="evol" title="A évolué depuis '+(prev?esc(prev.label):'le mois précédent')+'"></span>':'';
-      return '<div class="health"><span class="meteo-ico">'+icoMeteo(meteo(p.meteo_globale),26)+'</span><span class="dots">'+dots+'</span>'+icoTend(tend(p.tend_globale),20)+evol+'</div>';
+      var n1row='';
+      if(showN1Only && changedVsPrev(p)){
+        var q=prevById[String(p.idInit)];
+        if(q){
+          var qDots='<span class="dot '+(meteo(q.meteo_budget)||'none')+'"></span><span class="dot '+(meteo(q.meteo_planning)||'none')+'"></span><span class="dot '+(meteo(q.meteo_perimetre)||'none')+'"></span>';
+          n1row='<div class="health health-prev"><span class="prev-label">N-1</span><span class="meteo-ico">'+icoMeteo(meteo(q.meteo_globale),20)+'</span><span class="dots">'+qDots+'</span></div>';
+        }
+      }
+      return '<div class="health"><span class="meteo-ico">'+icoMeteo(meteo(p.meteo_globale),26)+'</span><span class="dots">'+dots+'</span>'+icoTend(tend(p.tend_globale),20)+evol+'</div>'+n1row;
     }}
   ];
-  return head('Synthèse portfolio','Portefeuille ATS — projets AEO / PIAT suivis dans Pulse · '+esc(cp.label))+renderTable(cols,cp.projects,'portfolio')+legendPortfolio();
+  return head('Synthèse portfolio','Vue d\'ensemble des projets du portefeuille · '+esc(cp.label),n1tool)+renderTable(cols,projects,'portfolio')+legendPortfolio();
 }
 function legendPortfolio(){
   return '<p class="hint" style="margin-top:12px;font-size:11.5px">'+
@@ -680,6 +714,25 @@ function renderRisk(cp){
   ];
   var dqTable=dqItems.length? renderTable(dqCols,dqItems,'dq') : '<div class="table-wrap"><table><tbody><tr><td class="hint" style="padding:18px">Aucune anomalie de données détectée.</td></tr></tbody></table></div>';
 
+  // zone masq: risques masqués (projets météo verte avec ≥1 jalon en retard)
+  var masqZone='';
+  var jctxRisk=jalonContext(cp);
+  if(jctxRisk){
+    var jlistRisk=jctxRisk.list;
+    var masqItems=cp.projects.filter(function(p){
+      if(meteo(p.meteo_globale)!=='green') return false;
+      return jlistRisk.some(function(j){ return String(j.idInit)===String(p.idInit)&&j._late; });
+    });
+    var masqCols=[
+      {label:'Projet (météo verte)',type:'text',get:function(p){return p.intitule;},render:function(p){return '<div class="pname">'+esc(p.intitule)+'</div>';}},
+      {label:'Météo globale',type:'meteo',align:'center',get:function(p){return meteo(p.meteo_globale);},render:function(p){return icoMeteo(meteo(p.meteo_globale),22);}},
+      {label:'Jalons en retard',type:'num',align:'num',get:function(p){return jlistRisk.filter(function(j){return String(j.idInit)===String(p.idInit)&&j._late;}).length;},render:function(p){return jlistRisk.filter(function(j){return String(j.idInit)===String(p.idInit)&&j._late;}).length;}}
+    ];
+    var masqTable=masqItems.length? renderTable(masqCols,masqItems,'masq') : '<div class="table-wrap"><table><tbody><tr><td class="hint" style="padding:18px">Aucun risque masqué détecté.</td></tr></tbody></table></div>';
+    masqZone='<div class="zone-title" style="margin-top:22px">Risques masqués</div><div class="zone-sub">projets à météo globale verte portant au moins un jalon en retard — risque sous-déclaré</div>'+
+      '<div class="meta" style="margin:8px 0 12px"><span class="chip on">'+esc(jalonPeriodLabel())+'</span></div>'+masqTable;
+  }
+
   // zone 3b: jalon data coherence (if jalon import for the period)
   var jctx=jalonContext(cp);
   var jdqZone='';
@@ -700,6 +753,7 @@ function renderRisk(cp){
     '<div class="zone-title" style="margin-top:22px">Contrôle de cohérence des météos</div><div class="zone-sub">écart entre la météo globale et les axes (budget · planning · périmètre)</div>'+
     coTable+
     '<p class="hint" style="margin-top:12px;font-size:11.5px">⚠ rouge en tête de carte = projet sans plan de mitigation · cohérence : soleil + alerte rouge = globale sous-évaluée, orage + voyant vert = sur-évaluée (détail au survol des icônes).</p>'+
+    masqZone+
     '<div class="zone-title" style="margin-top:22px">Contrôles de cohérence des données</div><div class="zone-sub">qualité et cohérence des fiches · une ligne par projet présentant au moins une anomalie</div>'+
     dqTable+jdqZone;
 }
@@ -861,7 +915,7 @@ function renderJalons(view){
   if(!ctx){
     return head('Jalons Projets','Suivi du delivery & des jalons · '+esc(view.label))+
       periodChip+
-      '<div class="empty-state" style="margin-top:8px"><h2>Aucun jalon pour '+esc(view.label)+'</h2><p>Importez le fichier « Export Pulse Jalon » correspondant à cette période.</p><button class="btn primary" onclick="APP.openImport(\'jalon\')">Importer les jalons</button></div>';
+      '<div class="empty-state" style="margin-top:8px"><h2>Aucun jalon pour '+esc(view.label)+'</h2><p>Importez le fichier « Export Jalons » correspondant à cette période.</p><button class="btn primary" onclick="APP.openImport(\'jalon\')">Importer les jalons</button></div>';
   }
   var list=ctx.list, obs=ctx.obs;
   var actifs=list.filter(function(j){return j._actif;}).length;
@@ -881,8 +935,6 @@ function renderJalons(view){
     kpi(itGaps,'Écart IT / Métier')+
     kpi(liv30,'À livrer ≤ 30 j')+
     '</div>';
-  var segs=[['retard','En retard'],['risque','À risque imminent'],['30','≤ 30 j'],['60','≤ 60 j'],['90','≤ 90 j'],['replan','Replanifiés'],['tous','Tous']];
-  var segBar='<div class="segbar">'+segs.map(function(s){ var n=jalonSegment(list,s[0],obs).length; return '<button class="seg'+(jalonSeg===s[0]?' on':'')+'" onclick="APP.setJalonSeg(\''+s[0]+'\')">'+s[1]+'<b>'+n+'</b></button>'; }).join('')+'</div>';
   var jcols=[
     {label:'Projet',type:'text',get:function(j){return j.intitule;},render:function(j){return '<div class="pname">'+esc(j.intitule)+'</div>';}},
     {label:'Jalon',type:'text',get:function(j){return j.jalon;},render:function(j){return esc(j.jalon||'—');}},
@@ -896,14 +948,51 @@ function renderJalons(view){
     {label:'Cause de retard',type:'text',get:function(j){return j.cause;},render:function(j){var c=String(j.cause||'');return c?esc(c.slice(0,60))+(c.length>60?'…':''):'—';}},
     {label:'Météo projet',type:'meteo',align:'center',get:function(j){return j._meteo;},render:function(j){return icoMeteo(j._meteo,20);}}
   ];
-  var rows=jalonSegment(list,jalonSeg,obs);
-  if(jalonStatutFilter!=null){
-    rows=rows.filter(function(j){ var raw=(j.statut&&String(j.statut).trim())?String(j.statut).trim():'(vide)'; return raw===jalonStatutFilter; });
+  var segs=[['tous','Tous'],['retard','En retard'],['risque','À risque imminent'],['30','≤ 30 j'],['60','≤ 60 j'],['90','≤ 90 j'],['replan','Replanifiés']];
+  var segBar='<div class="segbar">'+segs.map(function(s){ var n=jalonSegment(list,s[0],obs).length; return '<button class="seg'+(jalonSeg===s[0]?' on':'')+'" onclick="APP.setJalonSeg(\''+s[0]+'\')">'+s[1]+'<b>'+n+'</b></button>'; }).join('')+'</div>';
+
+  // Filtres rapides (valeurs dynamiques issues des données)
+  function vals(field,norm2){ var seen={},out=[]; list.forEach(function(j){ var v=(j[field]&&String(j[field]).trim())?String(j[field]).trim():'(vide)'; if(!seen[v]){seen[v]=1;out.push(v);} }); return out.sort(); }
+  var projVals=[], projSeen={};
+  list.forEach(function(j){ var v=j.intitule||'—'; if(!projSeen[v]){projSeen[v]=1;projVals.push(v);} });
+  projVals.sort();
+  window._jalonCtxList=projVals;
+
+  function filterChips(type,values,selected){
+    if(!values.length) return '<span class="hint" style="font-size:11.5px">Aucune valeur disponible.</span>';
+    return values.map(function(v){
+      var on=selected.indexOf(v)>-1;
+      return '<button class="seg'+(on?' on':'')+'" style="border-radius:8px;font-size:12px;padding:5px 11px" onclick="APP.toggleJalonFilter(\''+type+'\','+JSON.stringify(v)+')">'+esc(v)+'</button>';
+    }).join('');
   }
-  var statutChip=jalonStatutFilter!=null?'<div class="chips-edit" style="margin:-4px 0 12px"><span class="chip-x">Statut : '+esc(jalonStatutFilter)+'<button title="Retirer" onclick="APP.setJalonStatutFilter(null)">×</button></span></div>':'';
+
+  var statVals=vals('statut'); var dirVals=vals('clientDir'); var cpVals=vals('cp');
+  // Filtre projet : champ de saisie + chips
+  var projSearch='<div class="addf" style="margin-bottom:8px"><input id="jProjSearch" type="text" placeholder="Rechercher un projet..." oninput="APP.renderJalonProjSugg(this.value)" style="flex:1"><button class="btn" onclick="document.getElementById(\'jProjSearch\').value=\'\';APP.renderJalonProjSugg(\'\')">✕</button></div>'+
+    '<div id="jProjSugg" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>'+
+    (jalonFilters.projets.length?'<div class="chips-edit" style="margin:4px 0 6px">'+jalonFilters.projets.map(function(v,i){return '<span class="chip-x">'+esc(v)+'<button onclick="APP.removeJalonFilter(\'projets\','+i+')">×</button></span>';}).join('')+'</div>':'');
+
+  var hasAnyFilter=jalonFilters.projets.length||jalonFilters.statuts.length||jalonFilters.directions.length||jalonFilters.chefs.length;
+  var resetBtn=hasAnyFilter?'<button class="btn" style="margin-left:auto;font-size:12px" onclick="APP.resetJalonFilters()">↺ Réinitialiser les filtres</button>':'';
+
+  var filterPanel='<div class="filter-panel">'+
+    '<div class="fp-header"><span class="fp-title">Filtres</span>'+resetBtn+'</div>'+
+    '<div class="fp-section"><div class="fp-label">Projet</div>'+projSearch+'</div>'+
+    '<div class="fp-section"><div class="fp-label">Statut</div>'+filterChips('statuts',statVals,jalonFilters.statuts)+'</div>'+
+    '<div class="fp-section"><div class="fp-label">Direction</div>'+filterChips('directions',dirVals,jalonFilters.directions)+'</div>'+
+    '<div class="fp-section"><div class="fp-label">Chef de projet</div>'+filterChips('chefs',cpVals,jalonFilters.chefs)+'</div>'+
+    '</div>';
+
+  // Application des filtres
+  var rows=jalonSegment(list,jalonSeg,obs);
+  if(jalonFilters.projets.length) rows=rows.filter(function(j){ return jalonFilters.projets.indexOf(j.intitule||'—')>-1; });
+  if(jalonFilters.statuts.length){ rows=rows.filter(function(j){ var v=(j.statut&&String(j.statut).trim())?String(j.statut).trim():'(vide)'; return jalonFilters.statuts.indexOf(v)>-1; }); }
+  if(jalonFilters.directions.length){ rows=rows.filter(function(j){ var v=(j.clientDir&&String(j.clientDir).trim())?String(j.clientDir).trim():'(vide)'; return jalonFilters.directions.indexOf(v)>-1; }); }
+  if(jalonFilters.chefs.length){ rows=rows.filter(function(j){ var v=(j.cp&&String(j.cp).trim())?String(j.cp).trim():'(vide)'; return jalonFilters.chefs.indexOf(v)>-1; }); }
+
   var table=rows.length?renderTable(jcols,rows,'jalons'):'<div class="table-wrap"><table><tbody><tr><td class="hint" style="padding:18px">Aucun jalon dans cette vue.</td></tr></tbody></table></div>';
   return head('Jalons Projets','Suivi du delivery & des jalons · '+esc(view.label)+' · observation au '+fmtDate(obs))+
-    periodChip+kpis+segBar+statutChip+table+renderCarto(list,view);
+    periodChip+kpis+segBar+filterPanel+table;
 }
 var STATUT_COLORS={'realise':'#2F9E6B','anticipe':'#5BB89A','en cours':'#E0A21A','en retard':'#D6453F','non commence':'#B9B2C2','revu':'#714A80','abandonne':'#8A8593','(vide)':'#E5E1EA'};
 function statutColor(label){ if(label==='(vide)') return STATUT_COLORS['(vide)']; var k=norm(label); return STATUT_COLORS[k]||'#C8C2D0'; }
@@ -962,9 +1051,9 @@ function renderSettings(){
       '<div class="flabel">Intitulé projet — valeurs recherchées (correspondance « contient », insensible à la casse)</div>'+
       '<div class="fhint">Un projet est retenu si son intitulé contient au moins une de ces valeurs. Liste vide = critère non appliqué.</div>'+
       '<div class="chips-edit">'+chips+'</div>'+
-      '<div class="addf"><input id="newTitleFilter" type="text" placeholder="Ajouter une valeur (ex. AEO)" onkeydown="if(event.key===\'Enter\')APP.addTitleFilter()"><button class="btn primary" onclick="APP.addTitleFilter()">Ajouter</button></div>'+
-      '<div class="flabel">Suivi dans Pulse</div>'+
-      '<div class="fhint">« Oui » applique le filtre Suivi dans Pulse = Oui. « ALL » ne l\'applique pas.</div>'+
+      '<div class="addf"><input id="newTitleFilter" type="text" placeholder="Ajouter une valeur (ex. Programme)" onkeydown="if(event.key===\'Enter\')APP.addTitleFilter()"><button class="btn primary" onclick="APP.addTitleFilter()">Ajouter</button></div>'+
+      '<div class="flabel">Suivi Portfolio</div>'+
+      '<div class="fhint">« Oui » applique le filtre Suivi Portfolio = Oui. « ALL » ne l\'applique pas.</div>'+
       '<div class="toggle">'+
         '<button class="'+(s.pulseMode==='oui'?'on':'')+'" onclick="APP.setPulseMode(\'oui\')">Oui</button>'+
         '<button class="'+(s.pulseMode==='all'?'on':'')+'" onclick="APP.setPulseMode(\'all\')">ALL</button>'+
@@ -993,7 +1082,7 @@ function renderHelp(){
 
   var s1=sec(iImport,'Prise en main',
     '<p><strong>Premier démarrage</strong> — Cliquez sur <strong>Importer l\'extraction</strong> et sélectionnez le fichier <code>.xlsx</code> issu de l\'outil de pilotage projet (onglet <em>Export</em>). Choisissez le mois et l\'année correspondants. L\'outil retient les lignes brutes et applique les filtres à l\'affichage.</p>'+
-    '<p><strong>Import jalons</strong> — Cliquez sur <strong>Importer les jalons</strong> et sélectionnez le fichier <em>Export Pulse Jalon</em> pour la même période. L\'écran Jalons Projets et les contrôles de cohérence du Risk Management s\'activent alors automatiquement.</p>'+
+    '<p><strong>Import jalons</strong> — Cliquez sur <strong>Importer les jalons</strong> et sélectionnez le fichier <em>Export Jalons</em> pour la même période. L\'écran Jalons Projets et les contrôles de cohérence du Risk Management s\'activent alors automatiquement.</p>'+
     '<p><strong>Sauvegarde</strong> — <em>Sauvegarder</em> génère un fichier <code>DB.json</code> (état complet : données, jalons, paramètres). <em>Historiser</em> génère un fichier horodaté, utile pour archiver un arrêté mensuel. <em>Ouvrir un historique</em> restaure un <code>DB.json</code> précédent.</p>'+
     '<p><strong>Persistance automatique</strong> — L\'outil mémorise l\'état en continu dans le navigateur (IndexedDB). La prochaine ouverture du fichier HTML restaure la dernière session sans action supplémentaire.</p>');
 
@@ -1001,7 +1090,7 @@ function renderHelp(){
     '<p>Les filtres déterminent quels projets sont pris en compte sur <strong>tous les écrans</strong>. Ils sont accessibles via l\'icône ⚙ (engrenage) en haut à droite.</p>'+
     '<table class="htable"><thead><tr><th>Filtre</th><th>Comportement</th></tr></thead><tbody>'+
     '<tr><td><strong>Intitulé projet</strong></td><td>Liste de valeurs configurable. Un projet est retenu si son intitulé <em>contient</em> au moins une valeur (correspondance <code>%valeur%</code>, insensible à la casse). <strong>Liste vide = critère non appliqué</strong> (tous les projets passent).</td></tr>'+
-    '<tr><td><strong>Suivi dans Pulse</strong></td><td><code>Oui</code> : seuls les projets marqués « Suivi dans Pulse = Oui » sont retenus. <code>ALL</code> : le filtre n\'est pas appliqué.</td></tr>'+
+    '<tr><td><strong>Suivi Portfolio</strong></td><td><code>Oui</code> : seuls les projets marqués « Suivi Portfolio = Oui » sont retenus. <code>ALL</code> : le filtre n\'est pas appliqué.</td></tr>'+
     '</tbody></table>'+
     '<p>Toute modification est appliquée <strong>immédiatement</strong> sur tous les écrans, sans réimport. Les paramètres sont inclus dans les sauvegardes.</p>');
 
@@ -1017,29 +1106,32 @@ function renderHelp(){
     '<li><strong>Avancement calendaire</strong> = capacité de travail écoulée (jan → mois importé inclus) ÷ capacité annuelle. Tient compte des jours fériés, des congés estivaux (juil/août × 0,6) et des ponts conventionnels.</li>'+
     '<li><span class="hpill g">Conforme</span> écart entre taux de conso et avancement calendaire ≤ 10 pts. <span class="hpill r">Sur-conso.</span> > +10 pts. <span class="hpill b">Sous-conso.</span> < −10 pts.</li>'+
     '</ul>'+
+    '<p><strong>Bouton « Évolutions N-1 »</strong> (en-tête de l\'écran Portfolio, à droite) — filtre le tableau sur les projets ayant changé depuis la période précédente. Quand actif : ligne N-1 (météo globale + 3 axes) apparaît dans la colonne Santé. Disponible uniquement si une période N-1 est chargée.</p>'+
     '<p>Un clic sur l\'en-tête d\'une colonne trie le tableau ; un deuxième clic inverse l\'ordre.</p>');
 
   var s4=sec(iRisk,'Écran Risk Management',
-    '<p>Trois zones distinctes :</p>'+
+    '<p>Quatre zones distinctes :</p>'+
     '<p><strong>1. Projets en difficulté</strong> — cartes pour chaque projet dont la météo globale est jaune ou rouge (rouges en tête). Un triangle ⚠ rouge signale l\'absence de plan de mitigation documenté.</p>'+
     '<p><strong>2. Cohérence des météos</strong> — détecte les écarts entre la météo globale et les axes (budget, planning, périmètre) :</p>'+
     '<ul>'+
     '<li>Globale verte mais ≥ 1 axe rouge ou ≥ 2 axes jaunes → <em>sous-évaluée</em>.</li>'+
     '<li>Globale jaune ou rouge sans aucun axe dégradé → <em>sur-évaluée</em>.</li>'+
     '</ul>'+
-    '<p><strong>3. Contrôles de cohérence des données</strong> — 7 contrôles sur les fiches projet (budget nul avec consommation, non démarré avec consommation, météo absente, dépassement d\'enveloppe, identification incomplète, narratif incomplet sur projet à risque, atterrissage projeté). Si des jalons sont importés pour la période, une sous-zone complémentaire vérifie la cohérence statut/avancement des jalons (7 contrôles additionnels).</p>');
+    '<p><strong>3. Risques masqués</strong> — projets dont la météo globale est verte mais qui portent ≥ 1 jalon en retard (nécessite un import jalon). Affiche la période d\'analyse active.</p>'+
+    '<p><strong>4. Contrôles de cohérence des données</strong> — 7 contrôles sur les fiches projet (budget nul avec consommation, non démarré avec consommation, météo absente, dépassement d\'enveloppe, identification incomplète, narratif incomplet sur projet à risque, atterrissage projeté). Si des jalons sont importés pour la période, une sous-zone complémentaire vérifie la cohérence statut/avancement des jalons (7 contrôles additionnels).</p>');
 
   var s5=sec(iJalon,'Écran Jalons Projets',
-    '<p>Disponible uniquement si un fichier <em>Export Pulse Jalon</em> a été importé pour la période affichée. Les jalons sont automatiquement restreints aux projets retenus par les filtres.</p>'+
+    '<p>Disponible uniquement si un fichier <em>Export Jalons</em> a été importé pour la période affichée. Les jalons sont automatiquement restreints aux projets retenus par les filtres.</p>'+
     '<p><strong>KPIs</strong> : taux de retard (jalons actifs en retard / total actifs), dérive moyenne, taux de replanification, écarts IT/Métier, jalons à livrer dans les 30 jours.</p>'+
-    '<p><strong>Segments</strong> — filtrez l\'affichage par vue :</p>'+
+    '<p><strong>Segments</strong> — filtrez l\'affichage par vue (<em>Tous</em> sélectionné par défaut) :</p>'+
     '<table class="htable"><thead><tr><th>Vue</th><th>Critère</th></tr></thead><tbody>'+
+    '<tr><td>Tous</td><td>Tous les jalons retenus (vue par défaut).</td></tr>'+
     '<tr><td>En retard</td><td>Jalons actifs dont le statut est « En retard » ou dont l\'échéance de référence est dépassée.</td></tr>'+
     '<tr><td>À risque imminent</td><td>Jalons actifs dont l\'échéance est dans les 30 j ET avancement ≤ 25 % ou statut « Non commencé » / « En retard ».</td></tr>'+
     '<tr><td>≤ 30 / 60 / 90 j</td><td>Jalons actifs à venir dans la fenêtre indiquée (cumulatifs).</td></tr>'+
     '<tr><td>Replanifiés</td><td>Jalons dont au moins une échéance a glissé vs l\'initiale, ou dont le statut est « Revu ».</td></tr>'+
     '</tbody></table>'+
-    '<p><strong>Cartographie</strong> — répartition par statut, concentration par direction et chef de projet, et <em>risques masqués</em> : projets dont la météo globale est verte mais qui portent au moins un jalon en retard.</p>'+
+    '<p><strong>Filtres rapides</strong> (entre segments et tableau) — 4 filtres cumulatifs, multi-valeurs, session uniquement : <strong>Projet</strong> (saisie libre + chips), <strong>Statut</strong>, <strong>Direction</strong>, <strong>Chef de projet</strong>. Logique OU intra-filtre, ET entre filtres. Bouton « Réinitialiser les filtres » disponible si des filtres sont actifs.</p>'+
     '<p><strong>Échéance de référence</strong> = première valeur renseignée parmi : Finale → Révisée Métier → Actualisée IT → Initiale.</p>');
 
   var s6=sec(iGear,'Règles de calcul — référence rapide',
@@ -1056,7 +1148,7 @@ function renderHelp(){
 
   return head('Documentation','Guide d\'utilisation — Reporting Portfolio')+
     '<div class="help-wrap">'+
-    '<p class="help-intro">L\'outil Reporting Portfolio est un fichier HTML autonome, utilisable hors connexion. Il consolide les données de pilotage projet (extraction mensuelle + jalons Pulse) et les restitue sur quatre écrans. Cliquez sur une section pour la développer.</p>'+
+    '<p class="help-intro">L\'outil Reporting Portfolio est un fichier HTML autonome, utilisable hors connexion. Il consolide les données de pilotage projet (extraction mensuelle + jalons) et les restitue sur quatre écrans. Cliquez sur une section pour la développer.</p>'+
     s1+s2+s3+s4+s5+s6+
     '</div>';
 }
@@ -1102,6 +1194,23 @@ window.APP={
   setJalonStatutFilter:function(label){ jalonStatutFilter=(jalonStatutFilter===label)?null:label; render(); },
   _setState:function(s){ state=s; normState(); },
   setJalonSeg:function(seg){ jalonSeg=seg; sortState.jalons=null; render(); },
+  toggleN1Only:function(){ showN1Only=!showN1Only; render(); },
+  toggleJalonFilter:function(type,val){
+    var arr=jalonFilters[type]; var idx=arr.indexOf(val);
+    if(idx>-1) arr.splice(idx,1); else arr.push(val);
+    render();
+  },
+  removeJalonFilter:function(type,idx){ jalonFilters[type].splice(idx,1); render(); },
+  resetJalonFilters:function(){ jalonFilters={projets:[],statuts:[],directions:[],chefs:[]}; render(); },
+  renderJalonProjSugg:function(q){
+    var el=document.getElementById('jProjSugg'); if(!el) return;
+    var qn=norm(q||''); var ctx=window._jalonCtxList||[];
+    var sugg=qn?ctx.filter(function(v){ return norm(v).indexOf(qn)>-1; }):[];
+    el.innerHTML=sugg.slice(0,8).map(function(v){
+      var sel=jalonFilters.projets.indexOf(v)>-1;
+      return '<button class="seg'+(sel?' on':'')+'" style="border-radius:8px;font-size:12px;padding:5px 11px" onclick="APP.toggleJalonFilter(\'projets\','+JSON.stringify(v)+')">'+esc(v)+'</button>';
+    }).join('');
+  },
   addTitleFilter:function(){ var i=document.getElementById('newTitleFilter'); if(!i)return; var v=(i.value||'').trim(); if(!v){ i.focus(); return; } var arr=state.settings.titleFilters||(state.settings.titleFilters=[]); if(arr.map(function(x){return norm(x);}).indexOf(norm(v))===-1){ arr.push(v); } idbSave(); render(); var ni=document.getElementById('newTitleFilter'); if(ni)ni.focus(); },
   removeTitleFilter:function(idx){ var arr=state.settings.titleFilters||[]; arr.splice(idx,1); idbSave(); render(); },
   setPulseMode:function(m){ state.settings.pulseMode=(m==='all'?'all':'oui'); idbSave(); render(); },
@@ -1124,7 +1233,7 @@ document.addEventListener('click',function(e){
 document.getElementById('jsonInput').addEventListener('change',function(e){ if(e.target.files[0]) openHistorique(e.target.files[0]); e.target.value=''; });
 
 /* boot */
-idbLoad().then(function(saved){ if(saved&&saved.periods){ state=Object.assign({periods:{},jalons:{},settings:{titleFilters:['AEO','PIAT'],pulseMode:'oui'},currentKey:null,unit:'ke'},saved); normState(); if(!state.currentKey){ var ks=periodKeys(); state.currentKey=ks[ks.length-1]||null; } } render(); });
+idbLoad().then(function(saved){ if(saved&&saved.periods){ state=Object.assign({periods:{},jalons:{},settings:{titleFilters:[],pulseMode:'oui'},currentKey:null,unit:'ke'},saved); normState(); if(!state.currentKey){ var ks=periodKeys(); state.currentKey=ks[ks.length-1]||null; } } render(); });
 })();
 
 </script>
